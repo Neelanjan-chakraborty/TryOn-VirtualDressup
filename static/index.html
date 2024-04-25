@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Try-On</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Additional custom styles can be added here */
+        .skeleton {
+            background-color: #f3f3f3;
+            animation: loading 1.5s infinite ease-in-out;
+        }
+
+        @keyframes loading {
+            0% {
+                background-color: #f3f3f3;
+            }
+            50% {
+                background-color: #e0e0e0;
+            }
+            100% {
+                background-color: #f3f3f3;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <h1 class="text-3xl font-bold text-center mb-8">Virtual Try-On</h1>
+    <div class="container mx-auto p-8 flex">
+        <div class="max-w-md mx-auto bg-white rounded-lg overflow-hidden shadow-lg p-6">
+            <form id="tryon-form" enctype="multipart/form-data" action="/tryon" method="post">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="background">Background Image:</label>
+                    <input type="file" name="background" accept="image/*" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" onchange="previewImage(this, 'background-preview')">
+                    <img id="background-preview" src="#" alt="Background Preview" class="mt-2 hidden rounded-lg shadow-lg">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="garm_img">Garment Image:</label>
+                    <input type="file" name="garm_img" accept="image/*" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" onchange="previewImage(this, 'garm-preview')">
+                    <img id="garm-preview" src="#" alt="Garment Preview" class="mt-2 hidden rounded-lg shadow-lg">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="garment_des">Garment Description:</label>
+                    <input type="text" name="garment_des" placeholder="Enter garment description" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Try
+                    On</button>
+            </form>
+            <div id="progress-bar" class="mt-4 relative hidden">
+                <div class="bg-blue-400 h-4 rounded-lg"></div>
+                <div id="progress-indicator" class="absolute top-0 left-0 bg-blue-700 h-4 rounded-lg"></div>
+                <div id="progress-text" class="absolute top-0 right-0 text-xs text-gray-600">0%</div>
+            </div>
+        </div>
+
+        <div id="result-container" class="mt-8 p-5 mx-auto max-w-md mx-auto bg-white rounded-lg overflow-hidden shadow-lg p-6" style="display: none;">
+            <h2 class="text-2xl font-bold">Result</h2>
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <h3 class="text-lg font-bold mb-2">Input Background Image:</h3>
+                    <img id="background-image" src="#" alt="Input Background Image"
+                        class="background-placeholder max-w-full h-auto rounded-lg shadow-lg skeleton">
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-2">Input Garment Image:</h3>
+                    <img id="garm-image" src="#" alt="Input Garment Image" class="garm-placeholder max-w-full h-auto rounded-lg shadow-lg skeleton">
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-2">Output Image:</h3>
+                    <div id="result-image-container" class="max-w-full h-auto rounded-lg shadow-lg skeleton">
+                        <img id="result-image" src="#" alt="Result Image" class="hidden">
+                        <div id="result-loader" class="text-center p-8">
+                            <div class="inline-block w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+                        </div>
+                    </div>
+                    <button id="download-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2 hidden">Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        document.getElementById('tryon-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('https://tryon-virtualdressup.onrender.com/tryon', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.blob();
+                const resultUrl = URL.createObjectURL(result);
+                document.getElementById('result-image').src = resultUrl;
+                document.getElementById('result-image').classList.remove('hidden');
+                document.getElementById('result-loader').classList.add('hidden');
+                document.getElementById('result-container').style.display = 'block';
+                document.getElementById('download-button').classList.remove('hidden');
+
+                // Display input images (background and garment)
+                const backgroundFile = form.elements['background'].files[0];
+                const garmFile = form.elements['garm_img'].files[0];
+                const backgroundUrl = URL.createObjectURL(backgroundFile);
+                const garmUrl = URL.createObjectURL(garmFile);
+                document.getElementById('background-image').src = backgroundUrl;
+                document.getElementById('garm-image').src = garmUrl;
+
+                // Disable Try On button
+                document.getElementById('tryon-button').disabled = true;
+
+                // Connect to WebSocket endpoint to receive job status updates
+                const ws = new WebSocket('ws://localhost:8000/ws');
+                ws.onopen = function () {
+                    console.log('WebSocket connection opened');
+                };
+                ws.onmessage = function (event) {
+                    const status = event.data; // Job status received from WebSocket
+                    console.log('Job status:', status);
+                    updateProgressBar(status);
+                };
+                ws.onclose = function () {
+                    console.log('WebSocket connection closed');
+                };
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        function updateProgressBar(status) {
+            const progressBar = document.getElementById('progress-bar');
+            const progressIndicator = document.getElementById('progress-indicator');
+            const progressText = document.getElementById('progress-text');
+            if (status === 'RUNNING') {
+                // Update progress bar
+                progressBar.classList.remove('hidden');
+                progressIndicator.style.width = '50%';
+                progressText.textContent = '50%';
+            } else if (status === 'SUCCESS') {
+                // Update progress bar when job succeeds
+                progressIndicator.style.width = '100%';
+                progressText.textContent = '100%';
+            } else if (status === 'FAILED') {
+                // Handle failure (if needed)
+            }
+        }
+    </script>
+</body>
+
+</html>
