@@ -1,7 +1,5 @@
 from fastapi import FastAPI, WebSocket, UploadFile, Form
 from fastapi.responses import FileResponse
-from fastapi.responses import HTMLResponse
-from gradio_client import Client, file
 from enum import Enum
 import asyncio
 from io import BytesIO
@@ -14,7 +12,6 @@ class JobStatus(str, Enum):
     FAILED = "FAILED"
 
 app = FastAPI()
-client = Client("yisol/IDM-VTON")
 
 # Store WebSocket connections
 connections = set()
@@ -50,8 +47,8 @@ async def tryon(background: UploadFile = Form(...), garm_img: UploadFile = Form(
 
         # Call Gradio client predict function
         result = client.predict(
-            dict={"background": file(BytesIO(background_data)), "layers": [], "composite": None},
-            garm_img=file(BytesIO(garm_img_data)),
+            dict={"background": BytesIO(background_data), "layers": [], "composite": None},
+            garm_img=BytesIO(garm_img_data),
             garment_des=garment_des,
             is_checked=is_checked,
             is_checked_crop=is_checked_crop,
