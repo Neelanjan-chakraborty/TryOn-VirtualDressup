@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from enum import Enum
 import asyncio
 from io import BytesIO
+from gradio_client import Client, file
 
 # Define a custom enum for job status
 class JobStatus(str, Enum):
@@ -15,6 +16,9 @@ app = FastAPI()
 
 # Store WebSocket connections
 connections = set()
+
+# Initialize the Gradio client
+client = Client("yisol/IDM-VTON")
 
 # WebSocket route to handle job status updates
 @app.websocket("/ws")
@@ -47,8 +51,8 @@ async def tryon(background: UploadFile = Form(...), garm_img: UploadFile = Form(
 
         # Call Gradio client predict function
         result = client.predict(
-            dict={"background": BytesIO(background_data), "layers": [], "composite": None},
-            garm_img=BytesIO(garm_img_data),
+            dict={"background": file(BytesIO(background_data)), "layers": [], "composite": None},
+            garm_img=file(BytesIO(garm_img_data)),
             garment_des=garment_des,
             is_checked=is_checked,
             is_checked_crop=is_checked_crop,
